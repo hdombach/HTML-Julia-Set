@@ -79,15 +79,72 @@
 		margin: 0px 0px;
 	}
 	
+	.modal {
+		display: none;
+		position: fixed;
+		z-index: 1;
+		padding: 20px;
+		overflow: auto;
+	}
+	
+	.modal-content {
+		background-color: #fefefe;
+		margin: auto;
+		padding: 20px;
+		width: 80%;
+		border-radius: 10px;
+		box-shadow: 0px 0px 5px gray;
+	}
+
+	/* The Close Button */
+    .close {
+        float: right;
+        color: blue;
+    }
+
+	.close:hover,
+	.close:focus {
+		text-decoration: underline;
+		cursor: pointer;
+	}
+	
 		
 	</style>
 	
 	<head>
-		<title>WebGL _ Simple traingle</title>
+		<title>Julia Sets</title>
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	</head>
 	<element onfullscreenchange="fullscreenWasToggled()">
-	<body onload="InitDemo(); update();">
+	<body onload="Init(); update();">
+	
+		<!--help-->
+		<div id="helpMouse" class="modal" style="width: 400px;">
+			<div class="modal-content">
+				<span class="close" onclick="closeHelp();">continue</span>
+				Drag the mouse to change the pattern.
+			</div>
+		</div>
+		
+		<div id="helpSettings" class="modal" style="width: 400px; right: 170px; top: 100px;">
+			<div class="modal-content" onclick="closeHelp();">
+				<span class="close">continue</span>
+				You can select an input to change what the mouse controls or add numbers manually.
+			</div>
+		</div>
+		
+		<div id="helpAdvancedSettings" class="modal" style="width: 400px; right: 170px; top: 220px;">
+			<div class="modal-content" onclick="closeHelp();">
+				<span class="close">continue</span>
+				Use advanced settings to improve the quality or change the colors.
+			</div>
+		</div>
+		
+		
+		<script>
+			document.getElementById('helpMouse').style.display = "block";
+		</script>
+	
 		<section id="section">
 			<article>
 				<div class="windowControls">
@@ -111,8 +168,16 @@
 			<aside id="aside">
 				<input id = "mouseC" type="radio" name="control" checked> c:
 				<br />
-				<input id='cr' type='number' class="input" min=-2 max=2 step = 0.02 value = 0 onchange='update();'></input> +
-				<input id='ci' type='number' class="input" min=-2 max=2 step = 0.02 value = 0 onchange='update();'</input> i
+				<input id='cr' type='number' class="input" min=-2 max=2 step = 0.02 value = 0.5 onchange='update();'></input> +
+				<input id='ci' type='number' class="input" min=-2 max=2 step = 0.02 value = -1.5 onchange='update();'</input> i
+				<br />
+				<br />
+				<input id = 'mouseB' type = 'radio' name = 'control'> b:
+				<input id='br' type = 'number' class = 'input' min = -100 max = 100 step=1 value = 2 onchange = 'update();'></input>
+				<br />
+				<br />
+				<input id='mouseD' type = 'radio' name = 'control'> d:
+				<input id='dr' type = 'number' class = 'input' min=-100 max=100 step=1 value = 0 onchange = 'update();'></input>
 				<br />
 				<br />
 				<input id='mouseCam' type="radio" name="control"> Camera Settings:
@@ -127,7 +192,7 @@
 				<br />
 				<br />
 				<div id="Advanced Settings" style="display: none">
-					quality: <input id='camq' class='input' type='number' value=40 step = 1 min = 1 onchange='update();'></input>
+					quality: <input id='camq' class='input' type='number' value=20 step = 1 min = 1 onchange='update();'></input>
 					<br />
 					<br />
 					colors:
@@ -171,10 +236,14 @@ var fullscreenWasToggled;
 var hideControls;
 var createColor;
 var updateColor;
+var closeHelp;
+var helpCounter = 1;
 //var deletColor;
 
-var InitDemo = function () {
+var Init = function () {
 
+
+	document.getElementById('helpMouse').display = "block";
 					 
 	createColor = function(color, pos) {
 		console.log('create', color, pos)
@@ -268,6 +337,8 @@ var InitDemo = function () {
 	
 	var input_cr = document.getElementById('cr');
 	var input_ci = document.getElementById('ci');
+	var input_br = document.getElementById('br');
+	var input_dr = document.getElementById('dr');
 	var input_camx = document.getElementById('camx');
 	var input_camy = document.getElementById('camy');
 	var input_camz = document.getElementById('camz');
@@ -291,6 +362,8 @@ var InitDemo = function () {
 	var program;
 	var boxIndeces;
 	var cLocation;
+	var bLocation;
+	var dLocation;
 	var camPosLocation;
 	var camZoomLocation;
 	var camQualityLocation;
@@ -298,9 +371,10 @@ var InitDemo = function () {
 	
 	function createPipeline(firstTime) {
 		if (firstTime) {
-			createColor("#0b2375", 0);
-			createColor("#45379e", 0.3);
-			createColor("#9cbf8e", 0.7);
+			createColor("#4b0b04", 0);
+			createColor("#550b7f", 0.3);
+			createColor("#8dabed", 0.7);
+			createColor("#bee1ea", 0.9);
 			createColor("#ffffff", 1);
 			updateColor(false);
 		}
@@ -387,6 +461,8 @@ var InitDemo = function () {
 		
 		gl.useProgram(program);
 		cLocation = gl.getUniformLocation(program, 'uniform_c');
+		bLocation = gl.getUniformLocation(program, 'uniform_b');
+		dLocation = gl.getUniformLocation(program, 'uniform_d');
 		camPosLocation = gl.getUniformLocation(program, 'uniform_pos');
 		camZoomLocation = gl.getUniformLocation(program, 'uniform_z');
 		camQualityLocation = gl.getUniformLocation(program, 'uniform_q');
@@ -396,6 +472,12 @@ var InitDemo = function () {
 	
 	var c = new Float32Array([0.1, 0.2]);
 	gl.uniform2fv(cLocation, c);
+	
+	var b = 2;
+	gl.uniform1f(bLocation, b);
+	
+	var d = 0;
+	gl.uniform1f(dLocation, d);
 	
 	var camPos = new Float32Array([0.0, 0.0]);
 	gl.uniform2fv(camPosLocation, camPos);
@@ -426,7 +508,13 @@ var InitDemo = function () {
 		c[0] = parseFloat(input_ci.value);
 		gl.uniform2fv(cLocation, c);
 		
-		camPos[0] = parseFloat(input_camx.value);
+		b = parseFloat(input_br.value);
+		gl.uniform1f(bLocation, b);
+		
+		d = parseFloat(input_dr.value);
+		gl.uniform1f(dLocation, d);
+		
+		camPos[0] = parseFloat(input_camx.value) + 0.00000000000000000000000000000001;
 		camPos[1] = parseFloat(input_camy.value);
 		gl.uniform2fv(camPosLocation, camPos);
 		
@@ -482,11 +570,18 @@ var InitDemo = function () {
 			if (document.getElementById('mouseC').checked) {
 				input_cr.value = parseFloat(input_cr.value) + dx * zoom / 500.0;
 				input_ci.value = parseFloat(input_ci.value) + dy * zoom / 500.0;
+				return;
 			}
 			if (document.getElementById('mouseCam').checked) {
 				var pixelRatio = 1.0 / gl.canvas.height;
 				input_camx.value = parseFloat(input_camx.value) + dx * zoom * pixelRatio * 3;
 				input_camy.value = parseFloat(input_camy.value) + dy * zoom * pixelRatio * 3;
+			}
+			if (document.getElementById('mouseB').checked) {
+				input_br.value = parseFloat(input_br.value) + dx / 500.0;
+			}
+			if (document.getElementById('mouseD').checked) {
+				input_dr.value = parseFloat(input_dr.value) + dx / 500.0;
 			}
 	}
 	
@@ -585,6 +680,30 @@ var InitDemo = function () {
 			return string + ".0"
 		}
 	}
+	
+	closeHelp = function(stage) {
+		if (!!stage) {
+			if (stage != helpCounter) {
+				return;
+			}
+		}
+		switch(helpCounter) {
+			case 1:
+				document.getElementById('helpMouse').style.display = "none";
+				document.getElementById('helpSettings').style.display = "block";
+				helpCounter ++;
+				break;
+			case 2:
+				document.getElementById('helpSettings').style.display = "none";
+				document.getElementById('helpAdvancedSettings').style.display = "block";
+				helpCounter ++;
+				break;
+			case 3:
+				document.getElementById('helpAdvancedSettings').style.display = "none";
+				helpCounter ++;
+				break;
+		}
+	}
 };
 
 function resize(gl) {
@@ -620,7 +739,7 @@ function resize(gl) {
 
 var vertexShaderText =
 [
- 'precision mediump float;',
+ 'precision lowp float;',
  '',
  'attribute vec2 vertPosition;',
  'attribute vec2 vertTexCoord;',
@@ -642,25 +761,37 @@ var fragmentShaderColorText = "gl_FragColor = vec4(i / uniform_q, i / uniform_q,
 function fragmentShaderText() {
 	var text =
 	[
-	 'precision mediump float;', 						//1
+	 'precision lowp float;', 						//1
 	 '',
 	 'varying vec2 fragTexCoord;',
 	 'uniform vec2 uniform_c;',
+	 'uniform float uniform_b;',
+	 'uniform float uniform_d;',
 	 'uniform float uniform_r;',
 	 'uniform vec2 uniform_pos;',
 	 'uniform float uniform_z;',
 	 'uniform float uniform_q;',
 	 'void main() {',									//5
-		'vec2 c = uniform_c;',
+		'vec2 c1 = uniform_c;',
 		 'float i;',
+		 'vec2 b = vec2(uniform_b, 0);',
+		 'vec2 d = vec2(uniform_d, 0);',
 		 'vec2 x1 = ((fragTexCoord) * 3.0 - 1.5) * uniform_z;',
 		 'x1.x *= uniform_r;',
 		 'x1 += uniform_pos;',
 		 'for (float ui=0.0; ui>-1.0; ui++) {',						//10
 			 'i = uniform_q - ui;',
-			 'vec2 x0 = x1;',
-			 'x1.x = x0.x * x0.x - x0.y * x0.y + c.x;',
-			 'x1.y = 2.0 * x0.x * x0.y + c.y;',
+			 'vec2 x = x1;',
+			 'float t = atan(x.y / x.x);',
+			 'if (x.x == 0.0) {',
+				't = 0.0;',
+			 '}',
+			 'if (x.x < 0.0) {',
+				't += 3.1415926;',
+			 '}',
+			 'float r = sqrt(x.x * x.x + x.y * x.y);',
+			 'x1.x = pow(r, b.x) * cos(b.x * t) + pow(r, d.x) * cos((d.x) * t) + c1.x;',
+			 'x1.y = pow(r, b.x) * sin(b.x * t) + pow(r, d.x) * sin((d.x) * t) + c1.y;',
 			 'if(x1.x * x1.x + x1.y * x1.y > 4.0) {',
 				'break;',
 			 '}',
